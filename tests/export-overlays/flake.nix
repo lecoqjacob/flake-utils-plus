@@ -1,7 +1,9 @@
 {
-  inputs.utils.url = "/home/gytis/Projects/flake-utils-plus";
-  inputs.neovitality.url = "github:vi-tality/neovitality/69aaf582bf46992ae10e6aaa44f37c9d4096cc38"; # As of writing contains invalid `overlays` attribute.
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
+  inputs = {
+    utils.url = "path:../../";
+    nixpkgs.url = "github:NixOS/nixpkgs";
+    neovitality.url = "github:vi-tality/neovitality/69aaf582bf46992ae10e6aaa44f37c9d4096cc38"; # As of writing contains invalid `overlays` attribute.
+  };
 
   outputs = inputs @ {
     self,

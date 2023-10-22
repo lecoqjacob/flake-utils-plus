@@ -1,6 +1,8 @@
 {
-  inputs.utils.url = "path:../../";
-  inputs.nix-darwin.url = "github:LnL7/nix-darwin?ref=2f2bdf658d2b79bada78dc914af99c53cad37cba";
+  inputs = {
+    utils.url = "path:../../";
+    nix-darwin.url = "github:LnL7/nix-darwin?ref=2f2bdf658d2b79bada78dc914af99c53cad37cba";
+  };
 
   outputs = inputs @ {
     self,

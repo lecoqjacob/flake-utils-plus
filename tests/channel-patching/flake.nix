@@ -1,6 +1,8 @@
 {
-  inputs.utils.url = "path:../../";
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/3c4a65f323dd";
+  inputs = {
+    utils.url = "path:../../";
+    nixpkgs.url = "github:NixOS/nixpkgs/3c4a65f323dd";
+  };
 
   outputs = inputs @ {
     self,
