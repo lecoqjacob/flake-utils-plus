@@ -1,23 +1,28 @@
 {
-  inputs.utils.url = path:../../;
-  inputs.nix-darwin.url = github:LnL7/nix-darwin?ref=2f2bdf658d2b79bada78dc914af99c53cad37cba;
+  inputs.utils.url = "path:../../";
+  inputs.nix-darwin.url = "github:LnL7/nix-darwin?ref=2f2bdf658d2b79bada78dc914af99c53cad37cba";
 
-  outputs = inputs@{ self, nixpkgs, nix-darwin, utils }:
-    let
-      base-nixos = {
-        boot.loader.grub.devices = [ "nodev" ];
-        fileSystems."/" = { device = "test"; fsType = "ext4"; };
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    nix-darwin,
+    utils,
+  }: let
+    base-nixos = {
+      boot.loader.grub.devices = ["nodev"];
+      fileSystems."/" = {
+        device = "test";
+        fsType = "ext4";
       };
-    in
+    };
+  in
     utils.lib.mkFlake {
       inherit self inputs;
-      supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" ];
+      supportedSystems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux"];
 
       channels.nixpkgs.input = nixpkgs;
       channels.unstable.input = nixpkgs;
       channels.someChannel.input = nixpkgs;
-
-
 
       #################
       ### Test Data ###
@@ -33,19 +38,23 @@
 
         modules = [
           # Assigning to lib.* so we could assert these options in checks
-          ({ sharedExtraArg, sharedSpecialArg, ... }: {
-            lib = { inherit sharedExtraArg sharedSpecialArg; };
+          ({
+            sharedExtraArg,
+            sharedSpecialArg,
+            ...
+          }: {
+            lib = {inherit sharedExtraArg sharedSpecialArg;};
           })
         ];
       };
 
-      hosts.Plain.modules = [ base-nixos ];
+      hosts.Plain.modules = [base-nixos];
 
-      hosts."com.example.myhost".modules = [ base-nixos ];
+      hosts."com.example.myhost".modules = [base-nixos];
 
       hosts.WithFakeBuilder = {
-        modules = [ base-nixos ];
-        builder = args: { fakeBuilder = "fakeBuilder"; };
+        modules = [base-nixos];
+        builder = _args: {fakeBuilder = "fakeBuilder";};
       };
 
       hosts.Customized = {
@@ -58,80 +67,70 @@
 
         # Assigning to lib.* so we could assert these options in checks
         modules = [
-          ({ hostExtraArg, hostSpecialArg, ... }: {
-            lib = { inherit hostSpecialArg hostExtraArg; };
+          ({
+            hostExtraArg,
+            hostSpecialArg,
+            ...
+          }: {
+            lib = {inherit hostSpecialArg hostExtraArg;};
           })
         ];
       };
-
-
 
       ######################
       ### Test execution ###
       ######################
 
       outputsBuilder = channels: {
-        checks =
-          let
-            inherit (utils.lib.check-utils channels.nixpkgs) hasKey isEqual;
+        checks = let
+          inherit (utils.lib.check-utils channels.nixpkgs) hasKey isEqual;
 
-            plainHost = self.someConfigurations.Plain;
-            plainHostPkgs = plainHost.config.nixpkgs.pkgs;
-            plainHostName = plainHost.config.networking.hostName;
-            plainHostDomain = plainHost.config.networking.domain;
+          plainHost = self.someConfigurations.Plain;
+          plainHostPkgs = plainHost.config.nixpkgs.pkgs;
+          plainHostName = plainHost.config.networking.hostName;
+          plainHostDomain = plainHost.config.networking.domain;
 
-            reverseDnsHost = self.someConfigurations."com.example.myhost";
-            reverseDnsHostName = reverseDnsHost.config.networking.hostName;
-            reverseDnsHostDomain = reverseDnsHost.config.networking.domain;
+          reverseDnsHost = self.someConfigurations."com.example.myhost";
+          reverseDnsHostName = reverseDnsHost.config.networking.hostName;
+          reverseDnsHostDomain = reverseDnsHost.config.networking.domain;
 
-            customizedHost = self.darwinConfigurations.Customized;
-            customizedHostPkgs = customizedHost.pkgs;
-          in
-          {
+          customizedHost = self.darwinConfigurations.Customized;
+          customizedHostPkgs = customizedHost.pkgs;
+        in {
+          # Plain system with inherited options from hostDefaults
+          system_valid_1 = isEqual plainHostPkgs.system "aarch64-linux";
 
-            # Plain system with inherited options from hostDefaults
-            system_valid_1 = isEqual plainHostPkgs.system "aarch64-linux";
+          channelName_valid_1 = isEqual plainHostPkgs.name "someChannel";
 
-            channelName_valid_1 = isEqual plainHostPkgs.name "someChannel";
+          channelInput_valid_1 = hasKey plainHostPkgs "input";
 
-            channelInput_valid_1 = hasKey plainHostPkgs "input";
+          extraArgs_valid_1 = hasKey plainHost.config.lib "sharedExtraArg";
 
-            extraArgs_valid_1 = hasKey plainHost.config.lib "sharedExtraArg";
+          specialArgs_valid_1 = hasKey plainHost.config.lib "sharedSpecialArg";
 
-            specialArgs_valid_1 = hasKey plainHost.config.lib "sharedSpecialArg";
+          hostName_valid_1 = isEqual plainHostName "Plain";
 
-            hostName_valid_1 = isEqual plainHostName "Plain";
+          domain_valid_1 = isEqual plainHostDomain null;
 
-            domain_valid_1 = isEqual plainHostDomain null;
+          # System with overwritten hostDefaults
+          system_valid_2 = isEqual customizedHostPkgs.system "x86_64-darwin";
 
+          channelName_valid_2 = isEqual customizedHostPkgs.name "unstable";
 
-            # System with overwritten hostDefaults
-            system_valid_2 = isEqual customizedHostPkgs.system "x86_64-darwin";
+          channelInput_valid_2 = hasKey customizedHostPkgs "input";
 
-            channelName_valid_2 = isEqual customizedHostPkgs.name "unstable";
+          extraArgs_valid_2 = hasKey customizedHost.config.lib "hostExtraArg";
 
-            channelInput_valid_2 = hasKey customizedHostPkgs "input";
+          specialArgs_valid_2 = hasKey customizedHost.config.lib "hostSpecialArg";
 
-            extraArgs_valid_2 = hasKey customizedHost.config.lib "hostExtraArg";
+          # Hostname and Domain set from reverse DNS name
+          hostName_valid_3 = isEqual reverseDnsHostName "myhost";
 
-            specialArgs_valid_2 = hasKey customizedHost.config.lib "hostSpecialArg";
+          domain_valid_3 = isEqual reverseDnsHostDomain "example.com";
 
-
-            # Hostname and Domain set from reverse DNS name
-            hostName_valid_3 = isEqual reverseDnsHostName "myhost";
-
-            domain_valid_3 = isEqual reverseDnsHostDomain "example.com";
-
-
-            # Eval fakeBuilder
-            builder_applied = isEqual self.someConfigurations.WithFakeBuilder.fakeBuilder "fakeBuilder";
-
-          };
+          # Eval fakeBuilder
+          builder_applied = isEqual self.someConfigurations.WithFakeBuilder.fakeBuilder "fakeBuilder";
+        };
       };
-
     };
 }
-
-
-
-

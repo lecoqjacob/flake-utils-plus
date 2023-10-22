@@ -1,13 +1,15 @@
 {
-  inputs.utils.url = path:../../;
+  inputs.utils.url = "path:../../";
 
-  outputs = inputs@{ self, nixpkgs, utils }:
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    utils,
+  }:
     utils.lib.mkFlake {
       inherit self inputs;
-      supportedSystems = [ "x86_64-linux" ];
+      supportedSystems = ["x86_64-linux"];
       channels.nixpkgs.input = nixpkgs;
-
-
 
       #################
       ### Test Data ###
@@ -15,59 +17,54 @@
 
       # Applied to all Channels
       sharedOverlays = [
-        (final: prev: {
+        (_final: prev: {
           fromSharedOverlays = prev.hello;
         })
       ];
 
       # Applied only to `nixpkgs` channel
-      channels.nixpkgs.overlaysBuilder = channels: [
-        (final: prev: {
+      channels.nixpkgs.overlaysBuilder = _channels: [
+        (_final: prev: {
           fromChannelSpecific = prev.hello;
         })
       ];
-
 
       # Hosts
       hostDefaults.modules = [
         {
           nixpkgs.overlays = [
-            (final: prev: { fromHostConfig = prev.hello; })
+            (_final: prev: {fromHostConfig = prev.hello;})
           ];
 
           # To keep Nix from complaining
-          boot.loader.grub.devices = [ "nodev" ];
-          fileSystems."/" = { device = "test"; fsType = "ext4"; };
+          boot.loader.grub.devices = ["nodev"];
+          fileSystems."/" = {
+            device = "test";
+            fsType = "ext4";
+          };
         }
       ];
 
-      hosts.ExistingPkgsFlow = { };
-
+      hosts.ExistingPkgsFlow = {};
 
       ######################
       ### Test execution ###
       ######################
 
       outputsBuilder = channels: {
-        checks =
-          let
-            inherit (utils.lib.check-utils channels.nixpkgs) hasKey;
-            existingPkgsFlow = self.nixosConfigurations.ExistingPkgsFlow.pkgs;
-          in
-          {
+        checks = let
+          inherit (utils.lib.check-utils channels.nixpkgs) hasKey;
+          existingPkgsFlow = self.nixosConfigurations.ExistingPkgsFlow.pkgs;
+        in {
+          # ExistingPkgsFlow
+          sharedOverlays_Applied_1 = hasKey existingPkgsFlow "fromSharedOverlays";
 
-            # ExistingPkgsFlow
-            sharedOverlays_Applied_1 = hasKey existingPkgsFlow "fromSharedOverlays";
+          channelSpecific_Applied_1 = hasKey existingPkgsFlow "fromChannelSpecific";
 
-            channelSpecific_Applied_1 = hasKey existingPkgsFlow "fromChannelSpecific";
+          hostConfig_Applied_1 = hasKey existingPkgsFlow "fromHostConfig";
 
-            hostConfig_Applied_1 = hasKey existingPkgsFlow "fromHostConfig";
-
-            contains_srcs_1 = hasKey existingPkgsFlow "srcs";
-
-          };
+          contains_srcs_1 = hasKey existingPkgsFlow "srcs";
+        };
       };
-
     };
 }
-

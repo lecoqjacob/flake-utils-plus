@@ -2,22 +2,25 @@
   description = "FUP exporters demo";
 
   inputs = {
-    nixpkgs.url = github:nixos/nixpkgs/nixos-unstable-small; # Lets pretend that this is a stable channel
-    unstable.url = github:nixos/nixpkgs/nixos-unstable-small;
-    utils.url = path:../../;
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable-small"; # Lets pretend that this is a stable channel
+    unstable.url = "github:nixos/nixpkgs/nixos-unstable-small";
+    utils.url = "path:../../";
   };
 
-
-  outputs = inputs@{ self, nixpkgs, utils, ... }:
-    let
-      inherit (utils.lib) exportOverlays exportPackages exportModules;
-    in
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    utils,
+    ...
+  }: let
+    inherit (utils.lib) exportOverlays exportPackages exportModules;
+  in
     utils.lib.mkFlake {
       inherit self inputs;
 
       # Channel specific overlays. Overlays `coreutils` from `unstable` channel.
       channels.nixpkgs.overlaysBuilder = channels: [
-        (final: prev: { inherit (channels.unstable) ranger; })
+        (_final: _prev: {inherit (channels.unstable) ranger;})
       ];
 
       # Propagates to channels.<name>.overlaysBuilder
@@ -44,6 +47,5 @@
       };
 
       overlay = import ./overlays;
-
     };
 }
